@@ -469,7 +469,7 @@ flowchart TB
         └── 0002-use-redis-cache-aside-for-catalog.md
 ```
 
----
+--------------------------------------------------------------------------------------------
 
 # BookSwap — Лабораторна робота 2: Контейнеризація та локальне середовище
 
@@ -534,3 +534,34 @@ hadolint backend/Dockerfile frontend/Dockerfile
 ## ADR
 
 [`docs/adr/0003-container-base-images-and-network-isolation.md`](docs/adr/0003-container-base-images-and-network-isolation.md)
+
+--------------------------------------------------------------------------------------------
+
+# BookSwap — Лабораторна робота 3: CI та контроль якості коду
+
+## Стратегія гілок: GitHub Flow
+`main` завжди готова до деплою → `feature/*` → Pull Request → CI + 1 approve → squash merge.
+Захист `main`: `scripts/protect-main.sh` (або Settings → Branches → Rulesets).
+
+## Пайплайн (`.github/workflows/ci.yml`)
+```
+PR / push ─┬─ Lint Dockerfiles (hadolint)
+           ├─ Lint (backend, frontend)      ─┐
+           ├─ Test (backend, frontend)       ├─► Build → Trivy image scan → Push to GHCR
+           └─ Security: Trivy fs (CVE+secret)┘      (push лише на main і v*-теги)
+```
+
+## Образи
+`ghcr.io/shouldbec00l/bookswap/backend` та `.../frontend`, теги `sha-<short>`, `X.Y.Z`, `main`. Без `latest`.
+
+```
+docker pull ghcr.io/shouldbec00l/bookswap/backend:sha-<short>
+```
+
+## Реліз
+```
+git tag v1.0.0 && git push origin v1.0.0
+```
+
+## ADR
+[`docs/adr/0004-ci-cd-platform-versioning-and-quality-gates.md`](docs/adr/0004-ci-cd-platform-versioning-and-quality-gates.md)
