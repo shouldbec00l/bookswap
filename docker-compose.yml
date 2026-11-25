@@ -1,0 +1,109 @@
+name: bookswap
+
+services:
+  # ---------- Frontend: nginx зі статикою + реверс-проксі на /api ----------
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "${FRONTEND_PORT:-8080}:8080"      # єдина точка входу ззовні
+    environment:
+      BACKEND_URL: http://backend:3000
+    networks:
+      - frontend-net
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ---------- Backend API ----------
+  backend:
+    build:
+      context: ./backend
+    init: true                              # коректна обробка сигналів/зомбі-процесів
+    environment:
+      PORT: 3000
+      JWT_SECRET: ${JWT_SECRET:?задайте JWT_SECRET у .env}
+      JWT_TTL: ${JWT_TTL:-2h}
+      CATALOG_CACHE_TTL: ${CATALOG_CACHE_TTL:-60}
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:?}
+      DB_PASSWORD: ${DB_PASSWORD:?}
+      DB_NAME: ${DB_NAME:?}
+      REDIS_URL: redis://redis:6379
+      S3_ENDPOINT: http://minio:9000
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:?}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:?}
+      S3_BUCKET: ${S3_BUCKET:-book-covers}
+    networks:
+      - frontend-net                        # доступний для Frontend
+      - backend-net                         # має доступ до БД, Redis, S3
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    restart: unless-stopped
+
+  # ---------- PostgreSQL: лише в backend-net ----------
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${DB_USER:?}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?}
+      POSTGRES_DB: ${DB_NAME:?}
+    volumes:
+      - pgdata:/var/lib/postgresql/data     # іменований том: дані переживають перезапуск
+      - ./db/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    networks:
+      - backend-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+  # ---------- Redis (кеш каталогу): лише в backend-net ----------
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    networks:
+      - backend-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  # ---------- MinIO (локальна заміна S3 для обкладинок): лише в backend-net ----------
+  minio:
+    image: minio/minio:latest
+    command: ["server", "/data"]
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:?}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:?}
+    volumes:
+      - miniodata:/data
+    networks:
+      - backend-net
+    restart: unless-stopped
+
+networks:
+  frontend-net:
+    driver: bridge
+  backend-net:
+    driver: bridge
+    internal: true        # без виходу в зовнішній світ і без публікації портів
+
+volumes:
+  pgdata:
+  redisdata:
+  miniodata:

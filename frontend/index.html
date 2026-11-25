@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="uk">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BookSwap</title>
+    <style>
+      body { font-family: system-ui, sans-serif; max-width: 720px; margin: 2rem auto; padding: 0 1rem; }
+      form { display: flex; gap: .5rem; flex-wrap: wrap; margin: 1rem 0; }
+      input, button { padding: .4rem .6rem; }
+      li { margin: .3rem 0; }
+      .muted { color: #666; font-size: .85rem; }
+    </style>
+  </head>
+  <body>
+    <h1>📚 BookSwap</h1>
+    <p class="muted" id="status">Перевірка API…</p>
+
+    <h2>Акаунт</h2>
+    <form id="auth-form">
+      <input name="email" type="email" placeholder="email" required />
+      <input name="password" type="password" placeholder="пароль" required />
+      <input name="city" placeholder="місто (для реєстрації)" />
+      <button type="button" id="register">Реєстрація</button>
+      <button type="submit">Вхід</button>
+    </form>
+
+    <h2>Додати книгу</h2>
+    <form id="book-form">
+      <input name="title" placeholder="назва" required />
+      <input name="author" placeholder="автор" required />
+      <button type="submit">Додати</button>
+    </form>
+
+    <h2>Каталог</h2>
+    <ul id="books"></ul>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

@@ -468,3 +468,69 @@ flowchart TB
         ├── 0001-use-postgresql-as-primary-database.md
         └── 0002-use-redis-cache-aside-for-catalog.md
 ```
+
+---
+
+# BookSwap — Лабораторна робота 2: Контейнеризація та локальне середовище
+
+Сервіс обміну паперовими книгами. Реалізація C4 Container View у Docker Compose.
+
+## Архітектура контейнерів
+
+| Сервіс | Образ | Мережі | Порт назовні |
+|---|---|---|---|
+| frontend | nginx-unprivileged (статика Vite) | frontend-net | 8080 |
+| backend | node:22-alpine (Express API, JWT) | frontend-net, backend-net | — |
+| db | postgres:17-alpine | backend-net | — |
+| redis | redis:7-alpine (кеш каталогу) | backend-net | — |
+| minio | minio (S3 для обкладинок) | backend-net | — |
+
+`backend-net` має `internal: true`: БД, Redis та MinIO недосяжні з Frontend-контейнера й ззовні.
+
+## Запуск
+
+```bash
+cp .env.example .env      # змініть паролі та JWT_SECRET
+docker compose up --build
+```
+
+Відкрийте http://localhost:8080.
+
+## Перевірка вимог лабораторної
+
+```bash
+# 1. Healthcheck-и: усі сервіси мають статус healthy
+docker compose ps
+
+# 2. Збереження даних: створіть користувача й книгу в UI, потім
+docker compose down && docker compose up -d
+# книги залишаються (named volume pgdata)
+
+# 3. Ізоляція мереж: з Frontend до БД дістатися не можна
+docker compose exec frontend sh -c "nc -zv -w 2 db 5432"      # має завершитись помилкою
+docker compose exec backend  sh -c "nc -zv -w 2 db 5432"      # успіх
+
+# 4. Non-root
+docker compose exec backend id        # uid=1000(node)
+docker compose exec frontend id       # uid=101(nginx)
+
+# 5. Розмір образів
+docker images | grep bookswap
+
+# 6. Кеш Redis: другий запит повертає X-Cache: HIT
+curl -si http://localhost:8080/api/books | grep -i x-cache
+curl -si http://localhost:8080/api/books | grep -i x-cache
+
+# 7. Лінтинг (опціонально)
+hadolint backend/Dockerfile frontend/Dockerfile
+```
+
+## Відповідність 12-Factor
+
+- **III Config:** уся конфігурація — змінні оточення (`backend/src/config.js`, `.env`); без значення сервіс не стартує.
+- **VI Processes:** Backend stateless; стан у PostgreSQL/Redis/MinIO (томи).
+- **IX Disposability:** обробка SIGTERM/SIGINT, `init: true`, швидкий старт.
+
+## ADR
+
+[`docs/adr/0003-container-base-images-and-network-isolation.md`](docs/adr/0003-container-base-images-and-network-isolation.md)
