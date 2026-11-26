@@ -14,7 +14,13 @@ RUN npm run build
 
 # ---------- Етап 2: runtime (лише nginx + статика) ----------
 # nginx-unprivileged: працює від користувача nginx (UID 101), слухає порт 8080
-FROM nginxinc/nginx-unprivileged:1.27-alpine AS runtime
+# stable-alpine отримує патчі безпеки; після першого зеленого CI закріпіть точний тег (напр. 1.28-alpine)
+FROM nginxinc/nginx-unprivileged:stable-alpine AS runtime
+
+# Безпека (Lab 3): оновлюємо пакети ОС (виправлення CVE з Trivy), далі повертаємо UID 101
+USER root
+RUN apk upgrade --no-cache
+USER 101
 
 # Конфіг-шаблон; образ сам виконує envsubst при старті
 COPY nginx/default.conf.template /etc/nginx/templates/default.conf.template
@@ -28,4 +34,4 @@ EXPOSE 8080
 HEALTHCHECK --interval=10s --timeout=3s --start-period=5s --retries=5 \
   CMD wget -q --spider http://127.0.0.1:8080/ || exit 1
 
-# USER вже встановлено в базовому образі (nginx, UID 101)
+# Фінальний користувач: nginx (UID 101), непривілейований
