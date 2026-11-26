@@ -5,6 +5,8 @@ services:
   frontend:
     build:
       context: ./frontend
+    # IMAGE_TAG=sha-<short> запускає образ, зібраний у CI (docker compose pull); локально — :local
+    image: ghcr.io/shouldbec00l/bookswap/frontend:${IMAGE_TAG:-local}
     ports:
       - "${FRONTEND_PORT:-8080}:8080"      # єдина точка входу ззовні
     environment:
@@ -20,6 +22,7 @@ services:
   backend:
     build:
       context: ./backend
+    image: ghcr.io/shouldbec00l/bookswap/backend:${IMAGE_TAG:-local}
     init: true                              # коректна обробка сигналів/зомбі-процесів
     environment:
       PORT: 3000
@@ -85,7 +88,10 @@ services:
 
   # ---------- MinIO (локальна заміна S3 для обкладинок): лише в backend-net ----------
   minio:
-    image: minio/minio:latest
+    # MinIO прибрав образи з Docker Hub (жовтень 2025), а з quay.io — у 2026. Останній випуск образу
+    # (RELEASE.2025-09-07T16-13-09Z) доступний лише в дзеркалах. Без тегу latest: версія закріплена.
+    # Перевизначення: MINIO_IMAGE=quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z у .env
+    image: ${MINIO_IMAGE:-dappros/minio:RELEASE.2025-09-07T16-13-09Z}
     command: ["server", "/data"]
     environment:
       MINIO_ROOT_USER: ${S3_ACCESS_KEY:?}
