@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # ---------- Етап 1: встановлення залежностей (build-середовище) ----------
-FROM node:22-alpine AS deps
+FROM node:26-alpine AS deps
 WORKDIR /app
 
 # Спочатку лише маніфести залежностей: шар кешується, доки вони не змінились
@@ -10,7 +10,7 @@ RUN --mount=type=cache,target=/root/.npm \
     if [ -f package-lock.json ]; then npm ci --omit=dev; else npm install --omit=dev; fi
 
 # ---------- Етап 2: runtime ----------
-FROM node:22-alpine AS runtime
+FROM node:26-alpine AS runtime
 ENV NODE_ENV=production
 WORKDIR /app
 
