@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # ---------- Етап 1: збірка статики (Node + Vite) ----------
-FROM node:22-alpine AS build
+FROM node:26-alpine AS build
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
