@@ -1,0 +1,14 @@
+---
+common_packages:
+  - ca-certificates
+  - curl
+  - git
+  - gnupg
+  - ufw
+  - fail2ban
+  - unattended-upgrades
+
+ufw_allowed_tcp_ports:
+  - "22"
+  - "80"
+  - "443"

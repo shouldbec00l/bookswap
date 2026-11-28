@@ -565,3 +565,75 @@ git tag v1.0.0 && git push origin v1.0.0
 
 ## ADR
 [`docs/adr/0004-ci-cd-platform-versioning-and-quality-gates.md`](docs/adr/0004-ci-cd-platform-versioning-and-quality-gates.md)
+
+--------------------------------------------------------------------------------------------
+# Лабораторна робота 4: Інфраструктура як код (Terraform + Ansible)
+
+BookSwap на **AWS Free Tier** (eu-north-1): Terraform створює мережу та VM, Ansible готує ОС і Docker.
+Рішення зафіксовано в [ADR-0004](../docs/adr/0005-iac-aws-terraform-state-and-responsibilities.md).
+
+## Що створюється
+
+```
+Internet ──► Security Group (22 тільки з вашого IP, 80, 443)
+              └─ VPC 10.0.0.0/16 ─ public subnet 10.0.1.0/24 ─ EC2 t3.micro (Ubuntu 24.04) + Elastic IP
+                                                                  └─ Docker Compose (Лаб. 2)
+```
+
+| Компонент Deployment View | Реалізація |
+| --- | --- |
+| VPC, підмережа, маршрути | `aws_vpc`, `aws_subnet`, `aws_internet_gateway`, `aws_route_table` |
+| Firewall | `aws_security_group` (22/80/443) + UFW + fail2ban |
+| Сервер | `aws_instance` + `aws_eip`; IP — у `terraform output public_ip` |
+| БД / Redis / MinIO | Docker Compose у `internal`-мережі; назовні не публікуються |
+
+## Передумови
+
+Terraform ≥ 1.6 (або OpenTofu), Ansible ≥ 2.15, AWS CLI з налаштованими обліковими даними (`aws configure`), SSH-ключ (`ssh-keygen -t ed25519`).
+
+## 1. Terraform
+
+```bash
+cd infra/terraform
+cp terraform.tfvars.example terraform.tfvars   
+
+terraform init
+terraform fmt -check -recursive
+terraform validate
+terraform plan -out=tfplan
+terraform apply tfplan
+
+terraform output public_ip
+```
+
+`apply` також записує `../ansible/inventory.ini` з IP сервера.
+
+## 2. Ansible
+
+```bash
+cd ../ansible
+ansible-galaxy collection install -r requirements.yml
+ansible webservers -m ping
+ansible-playbook site.yml          # 1-й запуск: changed > 0
+ansible-playbook site.yml          # 2-й запуск: changed=0 (ідемпотентність)
+```
+
+Що робить плейбук (ролі `common`, `docker`, `app_dirs`):
+
+- `apt upgrade` (safe), базові пакети;
+- UFW (deny incoming; allow 22, 80, 443), fail2ban для sshd, вимкнення входу за паролем;
+- Docker Engine + Compose plugin з офіційного репозиторію, користувач у групі `docker`;
+- каталоги `/opt/bookswap/{data,backups,logs}`.
+
+## 3. Перевірка
+
+```bash
+ssh ubuntu@$(terraform -chdir=../terraform output -raw public_ip) \
+  'docker --version && docker compose version && id && sudo ufw status verbose && ls -l /opt/bookswap'
+```
+
+Перевірка закритих портів (з вашої машини; очікується timeout):
+
+```bash
+nc -zv -w 3 <IP> 5432; nc -zv -w 3 <IP> 6379; nc -zv -w 3 <IP> 9000
+```

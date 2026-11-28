@@ -1,0 +1,9 @@
+---
+- name: Створити директорії для розгортання проєкту
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ app_owner }}"
+    group: "{{ app_owner }}"
+    mode: "0750"
+  loop: "{{ app_dirs }}"

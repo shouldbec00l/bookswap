@@ -1,0 +1,13 @@
+---
+docker_arch_map:
+  x86_64: amd64
+  aarch64: arm64
+docker_apt_arch: "{{ docker_arch_map[ansible_facts['architecture']] }}"
+docker_packages:
+  - docker-ce
+  - docker-ce-cli
+  - containerd.io
+  - docker-buildx-plugin
+  - docker-compose-plugin
+docker_users:
+  - "{{ ansible_user }}"

@@ -1,0 +1,8 @@
+---
+- name: Базове налаштування сервера BookSwap
+  hosts: webservers
+  become: true
+  roles:
+    - common
+    - docker
+    - app_dirs

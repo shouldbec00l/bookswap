@@ -1,0 +1,8 @@
+; Згенеровано Terraform — не редагуйте вручну (файл у .gitignore).
+[webservers]
+bookswap-app ansible_host=${host}
+
+[webservers:vars]
+ansible_user=${user}
+ansible_ssh_private_key_file=${key_path}
+ansible_python_interpreter=/usr/bin/python3

@@ -1,0 +1,13 @@
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+*.tfvars
+!*.tfvars.example
+# .terraform.lock.hcl КОМІТИТИ (фіксує версії провайдерів)
+
+# Ansible: інвентар генерується Terraform-ом
+ansible/inventory.ini
+*.retry
+tfplan

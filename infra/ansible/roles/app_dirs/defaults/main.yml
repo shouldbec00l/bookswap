@@ -1,0 +1,8 @@
+---
+app_root: /opt/bookswap
+app_owner: "{{ ansible_user }}"
+app_dirs:
+  - "{{ app_root }}"
+  - "{{ app_root }}/data"
+  - "{{ app_root }}/backups"
+  - "{{ app_root }}/logs"

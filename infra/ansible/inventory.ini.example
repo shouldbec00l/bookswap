@@ -1,0 +1,8 @@
+; Приклад. Реальний inventory.ini генерує Terraform (terraform apply).
+[webservers]
+bookswap-app ansible_host=203.0.113.10
+
+[webservers:vars]
+ansible_user=ubuntu
+ansible_ssh_private_key_file=~/.ssh/id_ed25519
+ansible_python_interpreter=/usr/bin/python3
